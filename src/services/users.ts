@@ -1,5 +1,5 @@
 import { createHmac, randomBytes } from "crypto";
-import { prismaClient } from "../lib/db";
+import { prismaClient } from "@/lib/db";
 import JWT from "jsonwebtoken";
 
 class UserService {
@@ -9,7 +9,9 @@ class UserService {
       .digest("hex");
     return hashedPassword;
   }
-
+  public static decodeJWTToken(token: string) {
+    return JWT.decode(token);
+  }
   public static createUser(payload: CreateUserPayload) {
     const { firstName, lastName, email, password } = payload;
 
@@ -34,7 +36,8 @@ class UserService {
     const { email, password } = payload;
 
     const user = await this.getUserByEmail(email);
-    if (!user) throw new Error("user not found");
+    if (!user)
+      throw new Error("user not found", { cause: { statusCode: 404 } });
     const userSalt = user.salt;
 
     const usersHashPassword = this.generateHash(userSalt, password);
@@ -43,7 +46,7 @@ class UserService {
 
     const token = JWT.sign(
       { id: user.id, email: user.email },
-      process.env.SECRET_KEY ?? "SECRET_KEY"
+      process.env.SECRET_KEY
     );
     return token;
   }
